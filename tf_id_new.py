@@ -3,40 +3,70 @@ import numpy as np
 import math
 from q1b import partB #pre processing
 
-# Load the unigram index matrix from the pickle file
-with open('unigram_index.pickle', 'rb') as f:
-    unigram_matrix = pickle.load(f)
 
-# Create a vocabulary list containing all the terms in the matrix
-vocab = list(unigram_matrix.keys())
+with open('unigram_index.pickle', 'rb') as f:
+        unigram_index = pickle.load(f)
+
+
+vocab = list(unigram_index.keys())
 total_docs = 1400
 vocab_size = len(vocab)
 tf_idf_matrix = np.zeros((total_docs, vocab_size))
 
-# Compute the document frequency (df) value for each term in the vocabulary
-df = {}
-for term in vocab:
-    df[term] = len(unigram_matrix[term])
+def tf_idf_cal(scheme):
+        
+    #
+    df = {}
+    for term in vocab:
+        df[term] = len(unigram_index[term])
 
-# Compute the IDF value for each term in the vocabulary
-idf = {}
-for term in vocab:
-    idf[term] = np.log((total_docs)/(df[term]+1))
+    
+    idf = {}
+    for term in vocab:
+        idf[term] = np.log((total_docs)/(df[term]+1))
 
-# Load the documents
-docs = []
-for i in range(1, total_docs+1):
-    file_name = f"CSE508_Winter2023_Dataset/cranfield{str(i).zfill(4)}"
-    with open(file_name, "r") as file:
-        data = file.read()
-    docs.append(data)
+    
+    docs = []
+    for i in range(1, total_docs+1):
+        file_name = f"CSE508_Winter2023_Dataset/cranfield{str(i).zfill(4)}"
+        with open(file_name, "r") as file:
+            data = file.read()
+        docs.append(data)
 
-# Calculate the TF-IDF matrix
-for i, doc in enumerate(docs):
-    words = doc.lower().split()
-    for j, term in enumerate(vocab):
-        tf = words.count(term) / len(words)
-        tf_idf_matrix[i, j] = tf * idf[term]
+    
+    for i, doc in enumerate(docs):
+            words = doc.lower().split()
+            tf_list=[]
+            for t in words:
+                tf_list.append(words.count(t))
+                tf_max = max(tf_list)
+            for j, term in enumerate(vocab):
+                if scheme=="binary":
+                    if term in words:
+                        tf = 1
+                    else:
+                        tf=0
+                    tf_idf_matrix[i, j] = tf * idf[term]
+                if scheme=="raw":
+                    tf = words.count(term) 
+                    tf_idf_matrix[i, j] = tf * idf[term]
+                if scheme =="term_freq":
+                    tf = words.count(term) / len(words)
+                    tf_idf_matrix[i, j] = tf * idf[term]
+                if scheme=="log":
+                    tf = words.count(term)
+                    tf = np.log(1+tf)
+                    tf_idf_matrix[i, j] = tf * idf[term]
+                if scheme=="double":
+                    tf = words.count(term)
+                    tf = 0.5+0.5*(tf/tf_max)
+                    tf_idf_matrix[i, j] = tf * idf[term]
+
+
+
+    return tf_idf_matrix
+        
+    
 
 def take_input():
     query = input("What are you looking for?: ")
@@ -47,15 +77,46 @@ def take_input():
             j = vocab.index(term)
             query_vector[j] += 1
 
-    # Compute TF-IDF score for query
-    scores = np.dot(query_vector, tf_idf_matrix.T)
+    scores_binary = np.dot(query_vector, tf_idf_cal("binary").T)
+    scores_raw = np.dot(query_vector, tf_idf_cal("raw").T)
+    scores_term_freq = np.dot(query_vector, tf_idf_cal("term_freq").T)
+    scores_log = np.dot(query_vector, tf_idf_cal("log").T)
+    scores_double = np.dot(query_vector, tf_idf_cal("double").T)
 
-    # Get top 5 relevant documents
-    top_docs_idx = np.argsort(-scores)[:5]
-    top_docs_scores = scores[top_docs_idx]
+    
+    top_docs_binary = np.argsort(scores_binary)[::-1][:5]
+    top_docs_scores_binary = scores_binary[top_docs_binary]
+    print("BINARY SCHEME\n")
+    for i, id in enumerate(top_docs_binary):
+        print("Document- {}, Score- {}".format(id+1, top_docs_scores_binary[i]))
+    
+    top_docs_raw = np.argsort(scores_raw)[::-1][:5]
+    top_docs_scores_raw = scores_raw[top_docs_raw]
+    print("RAW SCHEME\n")
+    for i, id in enumerate(top_docs_raw):
+        print("Document- {}, Score- {}".format(id+1, top_docs_scores_raw[i]))
+    
+    top_docs_term_freq = np.argsort(scores_term_freq)[::-1][:5]
+    top_docs_scores_term_freq = scores_term_freq[top_docs_term_freq]
+    
+    print("TERM FREQUENCY SCHEME\n")
+    for i, id in enumerate(top_docs_term_freq):
+        print("Document- {}, Score- {}".format(id+1, top_docs_scores_term_freq[i]))
+    
+    top_docs_log = np.argsort(scores_log)[::-1][:5]
+    top_docs_scores_log = scores_log[top_docs_log]
+    print("LOG NORMALIZATION SCHEME\n")
+    
+    for i, id in enumerate(top_docs_log):
+        print("Document- {}, Score- {}".format(id+1, top_docs_scores_log[i]))
+    
+    top_docs_double = np.argsort(scores_double)[::-1][:5]
+    top_docs_scores_double = scores_binary[top_docs_double]
+    print("DOUBLE NORMALIZATION SCHEME\n")
+    for i, id in enumerate(top_docs_double):
+        print("Document- {}, Score- {}".format(id+1, top_docs_scores_double[i]))
+    
+    
 
-    # Print top 5 relevant documents and their scores
-    for i, idx in enumerate(top_docs_idx):
-        print(f"Rank {i+1} - Document index: {idx+1}, Score: {top_docs_scores[i]}")
 
 take_input()
