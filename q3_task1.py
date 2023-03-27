@@ -20,7 +20,7 @@ def calc_DCG(scores):   #DCG calculation function
     DCG = 0.0
     sc_len = len(scores)
     for i, score in enumerate(scores):
-        DCG +=((score) - 1) / log2(i + 2)   #class slides formula given
+        DCG +=((score)/ log2(i + 2)   #class slides formula given
     return DCG
 
 for URL_num in burner_list:
